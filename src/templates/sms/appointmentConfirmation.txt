@@ -1,0 +1,10 @@
+Appointment Confirmed!
+
+Doctor: {{doctorName}}
+Date: {{date}}
+Time: {{time}}
+Ref: {{appointmentNumber}}
+
+Please arrive 15 minutes early. Bring your ID and insurance card.
+
+Uniilorin-E-Hospital

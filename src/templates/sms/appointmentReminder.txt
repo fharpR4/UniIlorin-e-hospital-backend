@@ -1,0 +1,8 @@
+REMINDER: Appointment tomorrow with {{doctorName}} at {{time}}.
+
+Date: {{date}}
+Ref: {{appointmentNumber}}
+
+Please arrive 15 minutes early.
+
+UniIlorin-E-Hospital

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: white; padding: 40px 30px; text-align: center; }
+    .header h1 { font-size: 28px; margin: 0; }
+    .content { padding: 40px 30px; }
+    .button { display: inline-block; padding: 16px 40px; background: #4CAF50; color: white !important; text-decoration: none; border-radius: 6px; font-weight: 600; }
+    .link-box { background: #f9f9f9; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; word-break: break-all; font-size: 13px; margin: 20px 0; }
+    .footer { text-align: center; padding: 30px; background: #f5f5f5; color: #666; font-size: 13px; border-top: 1px solid #e0e0e0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Administrator Access Verification</h1>
+    </div>
+    <div class="content">
+      <h2>Hello {{firstName}},</h2>
+      <p style="margin: 20px 0;">Your <strong>Administrator</strong> account has been created for the University of Ilorin E-Hospital Management System.</p>
+      <p style="margin: 20px 0;">Please verify your email to access the admin panel:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{{verificationUrl}}" class="button">Verify Administrator Email</a>
+      </div>
+      <div class="link-box">{{verificationUrl}}</div>
+      <p style="margin: 20px 0; color: #856404;"><strong>This link expires in 24 hours.</strong></p>
+    </div>
+    <div class="footer">
+      <div>&copy; 2026 University of Ilorin E-Hospital - Administrator Portal</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Results Available</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 0;">
+                <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px; margin-bottom: 20px;">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Lab Results Available</h1>
+                            <p style="color: #E1BEE7; margin: 10px 0 0 0; font-size: 16px;">Your test results are ready</p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hello {{patientName}},</h2>
+                            
+                            <p style="color: #666666; line-height: 1.6; margin: 0 0 30px 0; font-size: 16px;">
+                                Your lab results are now available in your patient portal.
+                            </p>
+                            
+                            <div style="background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%); border-radius: 8px; padding: 25px; margin: 20px 0;">
+                                <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 10px 0; border-bottom: 1px solid #CE93D8;">
+                                            <strong style="color: #6A1B9A; font-size: 14px;">Record Number:</strong>
+                                        </td>
+                                        <td style="padding: 10px 0; border-bottom: 1px solid #CE93D8; text-align: right;">
+                                            <span style="color: #1976D2; font-size: 16px; font-weight: bold;">{{recordNumber}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0;">
+                                            <strong style="color: #6A1B9A; font-size: 14px;">Test Date:</strong>
+                                        </td>
+                                        <td style="padding: 10px 0; text-align: right;">
+                                            <span style="color: #333333; font-size: 14px;">{{testDate}}</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="background-color: #FFF3E0; border-left: 4px solid #FF9800; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <p style="color: #E65100; margin: 0; font-size: 14px;">
+                                    <strong>Important:</strong> Please login to your patient portal to view your complete lab results. If you have any questions, please contact your doctor.
+                                </p>
+                            </div>
+                            
+                            <table role="presentation" style="margin: 30px auto;">
+                                <tr>
+                                    <td style="border-radius: 4px; background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);">
+                                        <a href="{{recordsUrl}}" style="display: inline-block; padding: 15px 40px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold;">
+                                            View Lab Results
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #999999; font-size: 14px; margin: 30px 0 0 0; line-height: 1.6; text-align: center;">
+                                For privacy and security, results are only available through secure login.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e0e0e0;">
+                            <p style="color: #666666; margin: 0 0 10px 0; font-size: 14px;">
+                                <strong>Uniilorin-E-Hospital Management System</strong>
+                            </p>
+                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                                &copy; {{year}} E-Hospital. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
