@@ -24,63 +24,39 @@ const { errorHandler } = require('./middleware/errorHandler');
 // Initialize express app
 const app = express();
 
-// Trust proxy - CRITICAL for Railway/Heroku deployments
+// CRITICAL: Trust proxy for Railway
 app.set('trust proxy', 1);
 
-// CORS configuration - FIXED FOR PRODUCTION
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://uni-ilorin-e-hospital-frontend.vercel.app',
-  'https://unilorin-e-hospital-frontend.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean);
+// ==========================================
+// SIMPLIFIED CORS - THIS WILL WORK
+// ==========================================
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://uni-ilorin-e-hospital-frontend.vercel.app',
+    'https://unilorin-e-hospital-frontend.vercel.app'
+  ];
 
-console.log('Allowed CORS Origins:', allowedOrigins); // Debug log
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  }
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin) {
-      console.log('Request with no origin - allowed');
-      return callback(null, true);
-    }
-    
-    console.log('Request from origin:', origin); // Debug log
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log('Origin allowed by CORS');
-      callback(null, true);
-    } else {
-      console.log('Origin blocked by CORS:', origin);
-      callback(new Error(`Not allowed by CORS: ${origin}`));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  // CRITICAL: Explicitly set allowed methods
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  // CRITICAL: Explicitly set allowed headers
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'Access-Control-Request-Method',
-    'Access-Control-Request-Headers'
-  ],
-  // CRITICAL: Expose headers for frontend access
-  exposedHeaders: ['Authorization']
-};
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
+  next();
+});
 
-// CRITICAL: Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
-
-// Body parser
+// Body parser - MUST come after CORS
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -90,45 +66,40 @@ app.use(cookieParser());
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
-} else {
-  // Production logging - log only errors
-  app.use(morgan('combined', {
-    skip: function (req, res) { return res.statusCode < 400 }
-  }));
 }
 
-// Security middleware
+// Security middleware - with relaxed helmet for CORS
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 app.use(mongoSanitize());
 app.use(xss());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
 
-// Health check route (before any other routes)
+// Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'E-Hospital API is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    cors: 'enabled'
   });
 });
 
-// CORS test endpoint for debugging
+// CORS test endpoint
 app.get('/api/test-cors', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'CORS is working correctly',
+    message: 'CORS is working!',
     origin: req.headers.origin,
     timestamp: new Date().toISOString()
   });
@@ -149,7 +120,7 @@ app.use('/api/admin', adminRoutes);
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route not found: ${req.originalUrl}`
+    message: 'Route not found'
   });
 });
 
