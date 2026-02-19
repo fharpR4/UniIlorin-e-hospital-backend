@@ -1,127 +1,134 @@
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 
-// Initialize app FIRST
+// Route imports
+const authRoutes = require('./routes/authRoutes');
+const patientRoutes = require('./routes/patientRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const recordRoutes = require('./routes/recordRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+// Middleware imports
+const { errorHandler } = require('./middleware/errorHandler');
+
+// Initialize express app
 const app = express();
 
-// Trust proxy IMMEDIATELY (critical for Railway)
-app.set('trust proxy', 1);
-
-// ===================================================================
-// CORS MIDDLEWARE - MUST BE ABSOLUTELY FIRST BEFORE ANYTHING ELSE
-// ===================================================================
-app.use((req, res, next) => {
-  // Get the origin from request
-  const origin = req.headers.origin;
-  
-  // Log for debugging
-  console.log(`Request from origin: ${origin}`);
-  console.log(`Request method: ${req.method}`);
-  console.log(`Request path: ${req.path}`);
-  
-  // Always set these headers for ALL requests
-  res.setHeader('Access-Control-Allow-Origin', origin || 'https://uni-ilorin-e-hospital-frontend.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    console.log('Preflight request - returning 200');
-    return res.status(200).end();
-  }
-  
-  next();
-});
-
-// Now load other middleware AFTER CORS
+// Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser
 app.use(cookieParser());
 
-// Logging
-if (process.env.NODE_ENV !== 'production') {
+// Dev logging middleware
+if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Health check - BEFORE routes
+// Security middleware
+app.use(helmet());
+app.use(mongoSanitize());
+app.use(xss());
+
+// CORS configuration - FIXED: Added localhost:3001 and improved error handling
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [process.env.FRONTEND_URL]
+  : [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+
+console.log('Allowed CORS origins:', allowedOrigins);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests, or server-to-server)
+    if (!origin && process.env.NODE_ENV === 'development') {
+      console.log('No origin header, allowing in development');
+      return callback(null, true);
+    }
+    
+    if (!origin) {
+      // In production, we might want to be more strict
+      if (process.env.NODE_ENV === 'production') {
+        return callback(new Error('Origin header is required in production'), false);
+      }
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log(`CORS allowed for origin: ${origin}`);
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked for origin: ${origin}`);
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}`), false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', limiter);
+
+// Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'E-Hospital API is running',
-    timestamp: new Date().toISOString(),
-    cors: 'enabled'
-  });
-});
-
-// Test CORS endpoint
-app.get('/api/cors-test', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'CORS is working!',
-    receivedOrigin: req.headers.origin,
     timestamp: new Date().toISOString()
   });
 });
 
-// Import routes - AFTER basic setup
-let authRoutes, patientRoutes, doctorRoutes, appointmentRoutes;
-let recordRoutes, prescriptionRoutes, notificationRoutes;
-let analyticsRoutes, adminRoutes, errorHandler;
-
-try {
-  authRoutes = require('./routes/authRoutes');
-  patientRoutes = require('./routes/patientRoutes');
-  doctorRoutes = require('./routes/doctorRoutes');
-  appointmentRoutes = require('./routes/appointmentRoutes');
-  recordRoutes = require('./routes/recordRoutes');
-  prescriptionRoutes = require('./routes/prescriptionRoutes');
-  notificationRoutes = require('./routes/notificationRoutes');
-  analyticsRoutes = require('./routes/analyticsRoutes');
-  adminRoutes = require('./routes/adminRoutes');
-  const errorModule = require('./middleware/errorHandler');
-  errorHandler = errorModule.errorHandler;
-} catch (error) {
-  console.error('Error loading routes:', error.message);
-  // Continue anyway - routes might not exist yet
-}
-
-// API routes - only if they loaded successfully
-if (authRoutes) app.use('/api/auth', authRoutes);
-if (patientRoutes) app.use('/api/patients', patientRoutes);
-if (doctorRoutes) app.use('/api/doctors', doctorRoutes);
-if (appointmentRoutes) app.use('/api/appointments', appointmentRoutes);
-if (recordRoutes) app.use('/api/records', recordRoutes);
-if (prescriptionRoutes) app.use('/api/prescriptions', prescriptionRoutes);
-if (notificationRoutes) app.use('/api/notifications', notificationRoutes);
-if (analyticsRoutes) app.use('/api/analytics', analyticsRoutes);
-if (adminRoutes) app.use('/api/admin', adminRoutes);
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/patients', patientRoutes);
+app.use('/api/doctors', doctorRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/records', recordRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`
+    message: 'Route not found'
   });
 });
 
-// Error handler - only if it loaded
-if (errorHandler) {
-  app.use(errorHandler);
-} else {
-  app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(err.status || 500).json({
-      success: false,
-      message: err.message || 'Internal Server Error'
-    });
-  });
-}
-
-// Log that app is ready
-console.log('App.js loaded successfully');
-console.log('CORS enabled for all origins');
+// Error handler middleware (must be last)
+app.use(errorHandler);
 
 module.exports = app;
