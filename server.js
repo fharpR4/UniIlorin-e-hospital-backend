@@ -7,34 +7,14 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS Configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:5173',
-  'https://uni-ilorin-e-hospital-frontend.vercel.app',
-  'https://unilorin-e-hospital-backend-production.up.railway.app'
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) === -1) {
-        console.log('❌ Blocked origin:', origin);
-        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-    optionsSuccessStatus: 200,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  })
-);
+// 🔓 TEMPORARY: Allow all CORS for debugging
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+}));
 
 // Handle preflight requests
 app.options('*', cors());
@@ -44,9 +24,32 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Log all requests
+// Log all requests with detailed info
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin') || 'No origin'}`);
+  console.log('\n=== INCOMING REQUEST ===');
+  console.log('Time:', new Date().toISOString());
+  console.log('Method:', req.method);
+  console.log('Path:', req.path);
+  console.log('Origin:', req.get('origin') || 'No origin');
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+  }
+  console.log('========================\n');
+  next();
+});
+
+// Add CORS headers manually as backup
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.get('origin') || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
@@ -74,44 +77,84 @@ const connectDB = async () => {
 // Connect to MongoDB
 connectDB();
 
-// Import routes - FIXED PATH to point to src/routes
+// Import routes
 try {
-  // Clear the require cache to ensure fresh load
-  delete require.cache[require.resolve('./src/routes/authRoutes')];
+  // Try multiple possible paths
+  const possiblePaths = [
+    './src/routes/authRoutes',
+    './src/routes/authRoutes.js',
+    './routes/authRoutes',
+    './routes/authRoutes.js'
+  ];
   
-  const authRoutes = require('./src/routes/authRoutes');
-  console.log('✅ Auth routes loaded successfully from ./src/routes/authRoutes');
+  let authRoutes = null;
+  let loadedPath = null;
   
-  // Use routes
-  app.use('/api/auth', authRoutes);
-  console.log('✅ Auth routes registered at /api/auth');
+  for (const routePath of possiblePaths) {
+    try {
+      delete require.cache[require.resolve(routePath)];
+      authRoutes = require(routePath);
+      loadedPath = routePath;
+      console.log(`✅ Auth routes loaded successfully from ${loadedPath}`);
+      break;
+    } catch (err) {
+      // Continue to next path
+    }
+  }
+  
+  if (authRoutes && loadedPath) {
+    app.use('/api/auth', authRoutes);
+    console.log('✅ Auth routes registered at /api/auth');
+  } else {
+    throw new Error('Could not find auth routes file');
+  }
   
 } catch (error) {
   console.error('❌ Error loading auth routes:', error.message);
-  console.error('Please check that the file exists at: ./src/routes/authRoutes.js');
   console.error('Current directory:', __dirname);
   
   // Create temporary routes for testing
   console.log('⚠️ Using temporary auth endpoints for testing');
   
+  // Temporary register endpoint
   app.post('/api/auth/register', (req, res) => {
-    console.log('📝 Temporary register endpoint called with:', req.body);
+    console.log('📝 Temporary register endpoint called');
     res.status(201).json({ 
       success: true, 
       message: 'Temporary registration endpoint',
-      data: req.body
+      token: 'temp_jwt_token_' + Date.now(),
+      user: {
+        _id: 'temp_' + Date.now(),
+        email: req.body.email,
+        firstName: req.body.firstName || 'Test',
+        lastName: req.body.lastName || 'User',
+        role: req.body.role || 'patient'
+      }
     });
   });
   
+  // Temporary login endpoint
   app.post('/api/auth/login', (req, res) => {
-    console.log('🔑 Temporary login endpoint called with:', req.body);
+    console.log('🔑 Temporary login endpoint called');
+    const { email, password } = req.body;
+    
+    // Simple validation
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide email and password' 
+      });
+    }
+    
     res.status(200).json({ 
       success: true, 
-      message: 'Temporary login endpoint',
-      token: 'temporary_jwt_token_for_testing',
+      message: 'Temporary login successful',
+      token: 'temp_jwt_token_' + Date.now(),
       user: {
-        _id: '123456789',
-        email: req.body.email,
+        _id: 'temp_' + Date.now(),
+        email: email,
+        firstName: 'Test',
+        lastName: 'User',
         role: 'patient'
       }
     });
@@ -126,7 +169,8 @@ app.get('/health', (req, res) => {
     mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     mongoState: mongoose.STATES[mongoose.connection.readyState],
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    cors: 'disabled for debugging'
   });
 });
 
@@ -142,6 +186,7 @@ app.get('/test', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message);
+  console.error('Stack:', err.stack);
   res.status(500).json({ 
     success: false, 
     message: 'Internal server error',
@@ -161,12 +206,20 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`🧪 Test endpoint: http://localhost:${PORT}/test`);
-  console.log(`🔑 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
-  console.log(`🌐 Allowed CORS origins:`, allowedOrigins);
-  console.log(`📁 Current directory: ${__dirname}`);
-  console.log(`📁 Routes file: ${__dirname}/src/routes/authRoutes.js`);
-  console.log(`\nPress Ctrl+C to stop the server\n`);
+  console.log('\n' + '='.repeat(50));
+  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log('📍 Health check: http://localhost:' + PORT + '/health');
+  console.log('🧪 Test endpoint: http://localhost:' + PORT + '/test');
+  console.log('🔑 Auth endpoints: http://localhost:' + PORT + '/api/auth/*');
+  console.log('🔓 CORS: DISABLED - All origins allowed');
+  console.log('📁 Current directory:', __dirname);
+  console.log('='.repeat(50) + '\n');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.log('❌ UNHANDLED REJECTION! Shutting down...');
+  console.log(err.name, err.message);
+  console.log(err.stack);
+  process.exit(1);
 });
