@@ -28,23 +28,23 @@ const app = express();
 // CORS CONFIGURATION
 // ─────────────────────────────────────────────
 const allowedOrigins = [
-  // Production frontend
+  // ✅ Your production Vercel frontend — hardcoded as primary
   'https://uni-ilorin-e-hospital-frontend.vercel.app',
 
-  // Local development
+  // ✅ Local development origins
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:5173',
 
-  // Dynamic env variable (acts as override/extra origin)
+  // ✅ Extra origin from env variable (optional override)
   process.env.FRONTEND_URL,
-].filter(Boolean); // removes undefined/null entries
+].filter(Boolean); // removes any undefined/null entries
 
 console.log('✅ Allowed CORS origins:', allowedOrigins);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, curl, mobile apps, server-to-server)
+    // Allow requests with no origin (Postman, curl, mobile, server-to-server)
     if (!origin) {
       return callback(null, true);
     }
@@ -64,21 +64,17 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-// Apply CORS middleware — must come BEFORE all routes
+// ✅ Apply CORS — must come BEFORE everything else
 app.use(cors(corsOptions));
 
-// Handle preflight (OPTIONS) requests for all routes
+// ✅ Handle preflight (OPTIONS) requests for ALL routes
 app.options('*', cors(corsOptions));
 
 // ─────────────────────────────────────────────
 // CORE MIDDLEWARE
 // ─────────────────────────────────────────────
-
-// Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Cookie parser
 app.use(cookieParser());
 
 // Dev logging
@@ -95,7 +91,7 @@ app.use(xss());
 // RATE LIMITING
 // ─────────────────────────────────────────────
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   message: {
     success: false,
@@ -112,7 +108,7 @@ app.use('/api', limiter);
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'E-Hospital API is running',
+    message: '🏥 E-Hospital API is running',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
