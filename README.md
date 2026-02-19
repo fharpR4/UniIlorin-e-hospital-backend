@@ -57,7 +57,6 @@ This E-Hospital Management System leverages modern web technologies to create a 
 - **Database Hosting:** MongoDB Atlas
 
 ---
-
 ## System Architecture
 
 ```
@@ -88,7 +87,12 @@ This E-Hospital Management System leverages modern web technologies to create a 
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
+---|                  |
+   |                  |
+
+
+
+   ____________________________________________________
 
 ## Project Structure
 
