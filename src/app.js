@@ -25,35 +25,32 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 
 // ─────────────────────────────────────────────
+// TRUST PROXY — REQUIRED for Railway/Heroku/Render
+// Must be set FIRST before anything else
+// Fixes: ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+// ─────────────────────────────────────────────
+app.set('trust proxy', 1);
+
+// ─────────────────────────────────────────────
 // CORS CONFIGURATION
 // ─────────────────────────────────────────────
 const allowedOrigins = [
-  // ✅ Your production Vercel frontend — hardcoded as primary
   'https://uni-ilorin-e-hospital-frontend.vercel.app',
-
-  // ✅ Local development origins
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:5173',
-
-  // ✅ Extra origin from env variable (optional override)
   process.env.FRONTEND_URL,
-].filter(Boolean); // removes any undefined/null entries
+].filter(Boolean);
 
 console.log('✅ Allowed CORS origins:', allowedOrigins);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, curl, mobile, server-to-server)
-    if (!origin) {
-      return callback(null, true);
-    }
-
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       console.log(`✅ CORS allowed for origin: ${origin}`);
       return callback(null, true);
     }
-
     console.log(`🚫 CORS blocked for origin: ${origin}`);
     return callback(new Error(`Not allowed by CORS. Origin: ${origin}`), false);
   },
@@ -64,10 +61,7 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-// ✅ Apply CORS — must come BEFORE everything else
 app.use(cors(corsOptions));
-
-// ✅ Handle preflight (OPTIONS) requests for ALL routes
 app.options('*', cors(corsOptions));
 
 // ─────────────────────────────────────────────
@@ -77,12 +71,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Dev logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Security middleware
 app.use(helmet());
 app.use(mongoSanitize());
 app.use(xss());
