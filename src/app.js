@@ -25,9 +25,9 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 
 // ─────────────────────────────────────────────
-// TRUST PROXY — REQUIRED for Railway/Heroku/Render
-// Must be set FIRST before anything else
+// TRUST PROXY — Required for Railway
 // Fixes: ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+// Must be FIRST before everything
 // ─────────────────────────────────────────────
 app.set('trust proxy', 1);
 
@@ -61,6 +61,7 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
+// Apply CORS before all routes
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
@@ -116,8 +117,11 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/records', recordRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Analytics available at BOTH routes to support frontend calls
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin/analytics', analyticsRoutes);
 
 // ─────────────────────────────────────────────
 // 404 HANDLER
